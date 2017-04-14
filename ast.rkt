@@ -48,7 +48,6 @@ Let = struct ast-let
       [(list x e ...)
        (cons x (flatten e))]))
   (define (subst-rec t)
-    (displayln t)
     (cond
       [(list? t)
        (flatten (map (lambda (x) (subst-rec x)) t))]
