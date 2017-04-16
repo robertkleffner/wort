@@ -14,7 +14,7 @@
 ;; it first; as the value on top of the stack will be
 ;; the first element in the list.
 (define-macro (wrt-program EXPR)
-  #'(reverse (eval-wort (infer EXPR))))
+  #'(reverse (eval-wort (check-type EXPR))))
 (provide wrt-program)
 
 (define-macro (wrt-expr WORDS ...)

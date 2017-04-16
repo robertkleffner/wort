@@ -2,6 +2,8 @@
 
 (provide ast-prim ast-block ast-bind ast-let)
 (provide ast-prim? ast-block? ast-bind? ast-let?)
+(provide ast-prim-name ast-block-body ast-bind-name
+         ast-bind-body ast-let-name ast-let-arg ast-let-body)
 (provide subst)
 
 #|

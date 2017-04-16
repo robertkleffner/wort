@@ -8,7 +8,7 @@
 ;; ===================================================
 ;; ===================================================
 
-;; type Expression = Word
+;; type Expression = Word*
 ;; An expression is a list of operators, commonly called
 ;; 'words' in Forth and related languages.
 
