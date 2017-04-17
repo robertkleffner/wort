@@ -4,6 +4,6 @@
                "rackunit-lib"))
 (define build-deps '("scribble-lib" "racket-doc"))
 (define scribblings '(("scribblings/wort.scrbl" ())))
-(define pkg-desc "Description Here")
+(define pkg-desc "A core concatenative language with type inference")
 (define version "0.0")
-(define pkg-authors '(gamec))
+(define pkg-authors '(robkleffner))

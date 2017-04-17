@@ -143,22 +143,17 @@ occur as the last element in a list of types.
 
 ;; infer : TypeEnvironment, Expr -> (Subst, Type)
 (define (infer env expr)
-  (pretty-display env)
   (match expr
     [(list)
      (let ([a (fresh-seq)])
        (list empty (fun-type (list a) (list a))))]
     [(list e ... w)
-     (let* ([eh (begin (displayln "infer sub") (pretty-display e) "eh")]
-            [r1 (infer env e)]
+     (let* ([r1 (infer env e)]
             [s1 (first r1)]
             [t1 (second r1)]
-            [uh (begin (displayln "inferred sub") (pretty-display t1) "uh")]
-            [eh2 (begin (displayln "infer word") (pretty-display w) "eh2")]
             [r2 (infer-word (subst s1 env) w)]
             [s2 (first r2)]
             [t2 (second r2)]
-            [uh2 (begin (displayln "inferred word") (pretty-display t2) "uh2")]
             [phi (unify (fun-type-out t1) (fun-type-in t2))])
        (list (compose-subst (compose-subst phi s2) s1)
              (subst phi (fun-type (fun-type-in t1) (fun-type-out t2)))))]))
@@ -247,15 +242,11 @@ occur as the last element in a list of types.
 
 ;; inst : Scheme -> Type
 (define (inst sch)
-  (displayln "instantiating")
-  (pretty-display sch)
   (define (freshen v)
     (match v
       [(svar s) (list (svar s) (list (fresh-seq)))]
       [(ivar s) (list (ivar s) (list (fresh-ind)))]))
   (let ([fresh (map (lambda (v) (freshen v)) (scheme-vars sch))])
-    (pretty-display fresh)
-    (pretty-display (subst fresh (scheme-mono sch)))
     (subst fresh (scheme-mono sch))))
 
 ;; gen : TypeEnvironment, Type -> Scheme
