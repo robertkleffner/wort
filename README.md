@@ -11,7 +11,7 @@ wort
        | <<x>>
        | { <<e>> }
        | bind <<x>> ( <<e>> )
-       | let <<x>> = <<e>> ( <<e>> 
+       | let <<x>> = <<e>> ( <<e>> )
 <<p>> := add | call | fix | if | eq | less
 <<x>> := variables beginning with letter, followed by zero or more letters or numbers
 ```

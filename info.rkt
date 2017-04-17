@@ -6,4 +6,4 @@
 (define scribblings '(("scribblings/wort.scrbl" ())))
 (define pkg-desc "A core concatenative language with type inference")
 (define version "0.0")
-(define pkg-authors '(robkleffner))
+(define pkg-authors '(robertkleffner))
