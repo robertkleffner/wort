@@ -3,7 +3,9 @@
 (define deps '("base"
                "rackunit-lib"
                "brag"
-               "beautiful-racket"))
+               "beautiful-racket"
+               "beautiful-racket-lib"
+               "br-parser-tools-lib"))
 (define build-deps '("scribble-lib" "racket-doc"))
 (define scribblings '(("scribblings/wort.scrbl" ())))
 (define pkg-desc "A core concatenative language with type inference")
