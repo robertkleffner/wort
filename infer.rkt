@@ -3,11 +3,16 @@
 (require "ast.rkt")
 (require racket/pretty)
 
-(provide check-type)
 (define (check-type expr)
-  (begin
-    (infer (gamma empty) expr)
+  (reset-var)
+  (let ([t (second (infer (gamma empty) expr))])
+    (unify-ind t (fun-type (list) (list (fresh-seq))))
+    (displayln (string-append "inferred type: " (pretty-type t)))
     expr))
+(provide check-type)
+
+(module+ test
+  (require rackunit))
 
 ;; type Expr = Word*
 
@@ -31,6 +36,19 @@ occur as the last element in a list of types.
 (struct prim-type (name) #:transparent)
 
 (struct scheme (vars mono) #:transparent)
+
+(define (pretty-type t)
+  (match t
+   [(ivar n) n]
+   [(svar n) (string-append n "...")]
+   [(fun-type is os) (string-append "(" (pretty-type is) " -> " (pretty-type os) ")")]
+   [(list ts ...)
+    (string-join (map pretty-type ts) " ")]
+   [(prim-type p) (string-titlecase p)]
+   [(scheme vs t) (string-append "forall "
+                                 (string-join (map pretty-type vs) ",")
+                                 "."
+                                 (pretty-type t))]))
 
 ;; get-name : SVar | IVar -> String
 (define (get-name v)
@@ -57,8 +75,23 @@ occur as the last element in a list of types.
     [(svar n) (list (svar n))]
     [(fun-type in out) (append (ftv in) (ftv out))]
     [(scheme vs mono) (filter (lambda (v) (not (member v vs))) (ftv mono))]
-    [(gamma vs) (append* (map (lambda (s) (ftv (cadr s))) vs))]
+    [(gamma vs) (append* (map (lambda (s) (ftv (second s))) vs))]
     [_ empty]))
+(module+ test
+  (check-equal? (list) (ftv (list (prim-type "int"))))
+  (check-equal? (list (ivar "n") (svar "a"))
+                (ftv (list (ivar "n") (svar "a"))))
+  (check-equal? (list (ivar "n") (svar "a"))
+                (ftv (fun-type (list (ivar "n")) (list (svar "a")))))
+  (check-equal? (list (svar "a"))
+                (ftv (scheme (list (ivar "n"))
+                             (fun-type (list (ivar "n"))
+                                       (list (svar "a"))))))
+  (check-equal? (list (svar "a"))
+                (ftv (gamma (list (list "x"
+                                        (scheme (list (ivar "n"))
+                                                (fun-type (list (ivar "n"))
+                                                          (list (svar "a"))))))))))
 
 ;; ===================================================
 ;; ===================================================
@@ -90,12 +123,12 @@ occur as the last element in a list of types.
                (subst s (fun-type-out t)))]
 
     [(ivar? t)
-     (match (assoc t s)
+     (match (assoc (ivar-n t) s)
        [#f t]
        [other (second other)])]
 
     [(svar? t)
-     (match (assoc t s)
+     (match (assoc (svar-n t) s)
        [#f t]
        [other (second other)])]
 
@@ -106,10 +139,14 @@ occur as the last element in a list of types.
 
     [(gamma? t)
      (gamma (map (lambda (x)
-                   (list (car x) (subst s (cadr x))))
+                   (list (first x) (subst s (second x))))
                  (gamma-vs t)))]
 
     [#t t]))
+(module+ test
+  (check-equal?
+   (subst (list (list "a" (list (svar "b")))) (list (svar "a")))
+   (list (svar "b"))))
 
 ;; compose-subst : Subst, Subst -> Subst
 (define (compose-subst s1 s2)
@@ -133,6 +170,7 @@ occur as the last element in a list of types.
 ;; ===================================================
 
 (define ind 0)
+(define (reset-var) (set! ind 0))
 ;; fresh-var : -> String
 (define (fresh-var)
   (let ([x (string-append "a" (number->string ind))])
@@ -150,26 +188,41 @@ occur as the last element in a list of types.
     [(list e ... w)
      (let* ([r1 (infer env e)]
             [s1 (first r1)]
-            [t1 (second r1)]
+            [t1 (second r1)] 
             [r2 (infer-word (subst s1 env) w)]
             [s2 (first r2)]
             [t2 (second r2)]
             [phi (unify (fun-type-out t1) (fun-type-in t2))])
        (list (compose-subst (compose-subst phi s2) s1)
              (subst phi (fun-type (fun-type-in t1) (fun-type-out t2)))))]))
+(module+ test
+  (check-equal?
+   (second (infer (gamma (list)) (list (ast-prim "call"))))
+   (fun-type (list (svar "a1") (fun-type (list (svar "a1")) (list (svar "a2"))))
+             (list (svar "a2"))))
+  (reset-var)
+  (check-equal?
+   (second (infer (gamma (list)) (list (ast-bind "x" (list "x")))))
+   (fun-type (list (svar "a4") (ivar "a2"))
+             (list (svar "a4") (ivar "a2"))))
+  (reset-var)
+  (check-equal?
+   (second (infer (gamma (list)) (list (ast-let "x" (list (ast-prim "add")) (list "x")))))
+   (fun-type (list (svar "a4") (prim-type "int") (prim-type "int"))
+             (list (svar "a4") (prim-type "int")))))
 
 ;; infer-word : TypeEnvironment, Word -> (Subst, Type)
 (define (infer-word env word)
   (match word
     ;; numeric constant
     [c #:when (number? c)
-     (let ([a (fresh-seq)])
-       (list empty (fun-type (list a) (list a (prim-type "int")))))]
+       (let ([a (fresh-seq)])
+         (list empty (fun-type (list a) (list a (prim-type "int")))))]
 
     ;; boolean constant
     [c #:when (boolean? c)
-     (let ([a (fresh-seq)])
-       (list empty (fun-type (list a) (list a (prim-type "bool")))))]
+       (let ([a (fresh-seq)])
+         (list empty (fun-type (list a) (list a (prim-type "bool")))))]
 
     ;; block constant
     [(ast-block e)
@@ -181,11 +234,11 @@ occur as the last element in a list of types.
 
     ;; primitive word
     [(ast-prim n)
-     (list empty (infer-prim env n))]
+     (list empty (infer-prim n))]
 
     ;; variable reference
     [c #:when (string? c)
-     (list empty (inst (second (assoc c (gamma-vs env)))))]
+       (list empty (inst (second (assoc c (gamma-vs env)))))]
 
     ;; value binding
     [(ast-bind n e)
@@ -211,8 +264,8 @@ occur as the last element in a list of types.
             [t2 (second r2)])
        (list (compose-subst s2 s1) t2))]))
 
-;; infer-prim : TypeEnvironment, String -> Type
-(define (infer-prim env name)
+;; infer-prim : String -> Type
+(define (infer-prim name)
   (match name
     ["add"
      (let ([a (fresh-seq)])
@@ -240,19 +293,35 @@ occur as the last element in a list of types.
        (fun-type (list a (prim-type "int") (prim-type "int"))
                  (list a (prim-type "bool"))))]))
 
-;; inst : Scheme -> Type
+;; inst : Scheme | Type -> Type
 (define (inst sch)
   (define (freshen v)
     (match v
-      [(svar s) (list (svar s) (list (fresh-seq)))]
-      [(ivar s) (list (ivar s) (list (fresh-ind)))]))
-  (let ([fresh (map (lambda (v) (freshen v)) (scheme-vars sch))])
-    (subst fresh (scheme-mono sch))))
+      [(svar s) (list s (list (fresh-seq)))]
+      [(ivar s) (list s (list (fresh-ind)))]))
+  (match sch
+    [(scheme vs t)
+     (let ([fresh (map (lambda (v) (freshen v)) vs)])
+       (subst fresh t))]
+    [t t]))
+(module+ test
+  (reset-var)
+  (check-equal? (inst (scheme (list (ivar "a")) (list (ivar "a"))))
+                (list (ivar "a0")))
+  (reset-var)
+  (check-equal? (inst (scheme (list) (list (ivar "a"))))
+                (list (ivar "a"))))
 
 ;; gen : TypeEnvironment, Type -> Scheme
 (define (gen env ty)
   (let ([env-ftv (ftv env)])
     (scheme (filter (lambda (x) (not (member x env-ftv))) (ftv ty)) ty)))
+(module+ test
+  (check-equal? (gen (gamma (list)) (list (ivar "a")))
+                (scheme (list (ivar "a")) (list (ivar "a"))))
+  (check-equal? (gen (gamma (list (list "x" (fun-type (list) (list (ivar "a"))))))
+                     (list (ivar "a")))
+                (scheme (list) (list (ivar "a")))))
 
 ;; ===================================================
 ;; ===================================================
@@ -291,7 +360,10 @@ occur as the last element in a list of types.
             [phi2 (unify (subst phi t1s) (subst phi t2s))])
        (compose-subst phi2 phi))]
 
-    [(l r) (pretty-display l) (pretty-display r) (error "couldn't unify")]))
+    [(l r) (displayln "inference failed: unification error")
+           (displayln (string-append "left seq: " (pretty-type l)))
+           (displayln (string-append "right seq: " (pretty-type r)))
+           (error "will not run due to inference failure")]))
 
 ;; unify-ind : Type, Type -> Subst | Error
 (define (unify-ind t1 t2)
@@ -311,4 +383,7 @@ occur as the last element in a list of types.
                 [phi2 (unify (subst phi o1) (subst phi o2))])
            (compose-subst phi2 phi))]
 
-        [(l r) (pretty-display l) (pretty-display r) (error "couldn't unify")])))
+        [(l r) (displayln "inference failed: unification error")
+               (displayln (string-append "left: " (pretty-type l)))
+               (displayln (string-append "right: " (pretty-type r)))
+               (error "type checking failure")])))

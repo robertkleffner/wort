@@ -34,7 +34,6 @@
         (step-eval (step state))))
   ;; step :: MachineState -> MachineState | Error
   (define (step state)
-    (displayln state)
     (match state
       ;; Pushing values
       [(machine s (list c e ...))
