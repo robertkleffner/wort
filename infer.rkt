@@ -1,7 +1,6 @@
 #lang racket
 
 (require "ast.rkt")
-(require racket/pretty)
 
 (define (check-type expr)
   (reset-var)
@@ -77,6 +76,7 @@ occur as the last element in a list of types.
     [(scheme vs mono) (filter (lambda (v) (not (member v vs))) (ftv mono))]
     [(gamma vs) (append* (map (lambda (s) (ftv (second s))) vs))]
     [_ empty]))
+
 (module+ test
   (check-equal? (list) (ftv (list (prim-type "int"))))
   (check-equal? (list (ivar "n") (svar "a"))
@@ -143,6 +143,7 @@ occur as the last element in a list of types.
                  (gamma-vs t)))]
 
     [#t t]))
+
 (module+ test
   (check-equal?
    (subst (list (list "a" (list (svar "b")))) (list (svar "a")))
@@ -195,6 +196,7 @@ occur as the last element in a list of types.
             [phi (unify (fun-type-out t1) (fun-type-in t2))])
        (list (compose-subst (compose-subst phi s2) s1)
              (subst phi (fun-type (fun-type-in t1) (fun-type-out t2)))))]))
+
 (module+ test
   (check-equal?
    (second (infer (gamma (list)) (list (ast-prim "call"))))
@@ -304,6 +306,7 @@ occur as the last element in a list of types.
      (let ([fresh (map (lambda (v) (freshen v)) vs)])
        (subst fresh t))]
     [t t]))
+
 (module+ test
   (reset-var)
   (check-equal? (inst (scheme (list (ivar "a")) (list (ivar "a"))))
@@ -316,6 +319,7 @@ occur as the last element in a list of types.
 (define (gen env ty)
   (let ([env-ftv (ftv env)])
     (scheme (filter (lambda (x) (not (member x env-ftv))) (ftv ty)) ty)))
+
 (module+ test
   (check-equal? (gen (gamma (list)) (list (ivar "a")))
                 (scheme (list (ivar "a")) (list (ivar "a"))))
@@ -389,6 +393,7 @@ occur as the last element in a list of types.
                (displayln (string-append "right: " (pretty-type r)))
                (displayln r)
                (error "type checking failure")])))
+
 (module+ test
   (check-equal? (unify-ind (fun-type (list) (list)) (fun-type (list) (list)))
                 (list)))
