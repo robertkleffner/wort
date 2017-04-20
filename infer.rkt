@@ -6,8 +6,8 @@
 (define (check-type expr)
   (reset-var)
   (let ([t (second (infer (gamma empty) expr))])
-    (unify-ind t (fun-type (list) (list (fresh-seq))))
     (displayln (string-append "inferred type: " (pretty-type t)))
+    (unify-ind t (fun-type (list) (list (fresh-seq))))
     expr))
 (provide check-type)
 
@@ -107,7 +107,7 @@ occur as the last element in a list of types.
     (match ls
       [(list) (list)]
       [(list (list e1 ...) e2 ...) (append e1 (flatten e2))]
-      [(list t e2 ...) (cons t (flatten e2))]))
+      [(list t e2 ...) (list* t (flatten e2))]))
   
   ;; in-scheme : [String] -> (String, Seq) -> Bool
   (define (not-in-scheme vs)
@@ -250,7 +250,7 @@ occur as the last element in a list of types.
                        e)]
             [s1 (first r1)]
             [t1 (second r1)])
-       (list s1 (fun-type (append (fun-type-in t1) (list (subst s1 b)))
+       (list s1 (fun-type (append (fun-type-in t1) (flatten (list (subst s1 b))))
                           (fun-type-out t1))))]
 
     ;; expression binding
@@ -360,7 +360,7 @@ occur as the last element in a list of types.
             [phi2 (unify (subst phi t1s) (subst phi t2s))])
        (compose-subst phi2 phi))]
 
-    [(l r) (displayln "inference failed: unification error")
+    [(l r) (displayln "inference failed: sequence unification error")
            (displayln (string-append "left seq: " (pretty-type l)))
            (displayln (string-append "right seq: " (pretty-type r)))
            (error "will not run due to inference failure")]))
@@ -383,7 +383,12 @@ occur as the last element in a list of types.
                 [phi2 (unify (subst phi o1) (subst phi o2))])
            (compose-subst phi2 phi))]
 
-        [(l r) (displayln "inference failed: unification error")
+        [(l r) (displayln "inference failed: individual unification error")
                (displayln (string-append "left: " (pretty-type l)))
+               (displayln l)
                (displayln (string-append "right: " (pretty-type r)))
+               (displayln r)
                (error "type checking failure")])))
+(module+ test
+  (check-equal? (unify-ind (fun-type (list) (list)) (fun-type (list) (list)))
+                (list)))
