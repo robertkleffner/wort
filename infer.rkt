@@ -397,3 +397,9 @@ occur as the last element in a list of types.
 (module+ test
   (check-equal? (unify-ind (fun-type (list) (list)) (fun-type (list) (list)))
                 (list)))
+
+(module+ test
+  (reset-var)
+  (check-equal?
+   (second (infer (gamma (list)) (list (ast-bind "x" (list (ast-bind "x" (list "x")))))))
+   (fun-type (list (svar "a7") (ivar "a5") (ivar "a2")) (list (svar "a7") (ivar "a5")))))

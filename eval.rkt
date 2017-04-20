@@ -58,7 +58,7 @@
        (machine s (append exp e))]
       
       [(machine (list (ast-block exp) s ...) (list (ast-prim "fix") e ...))
-       (machine (list (ast-block (list* (ast-block exp) (ast-prim "fix"))) s)
+       (machine (list* (ast-block (list (ast-block exp) (ast-prim "fix"))) s)
                 (append exp e))]
       
       [(machine (list #t v1 v2 s ...) (list (ast-prim "if") e ...))
