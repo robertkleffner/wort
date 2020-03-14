@@ -54,18 +54,18 @@ Let = struct ast-let
       [(list? t)
        (flatten (map (lambda (x) (subst-rec x)) t))]
       [(string? t)
-       (if (eq? name t) rep t)]
+       (if (equal? name t) rep t)]
       [(ast-block? t)
        (ast-block (subst-rec (ast-block-body t)))]
       [(ast-bind? t)
        (ast-bind (ast-bind-name t)
-                 (if (eq? name (ast-bind-name t))
+                 (if (equal? name (ast-bind-name t))
                      (ast-bind-body t)
                      (subst-rec (ast-bind-body t))))]
       [(ast-let? t)
        (ast-let (ast-let-name t)
                 (subst-rec (ast-let-arg t))
-                (if (eq? name (ast-let-name t))
+                (if (equal? name (ast-let-name t))
                     (ast-let-body t)
                     (subst-rec (ast-let-body t))))]
       [#t t]))
